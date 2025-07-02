@@ -8,3 +8,4 @@ wheels/
 TreasureTrouble.txt
 # Virtual environments
 .venv
+Users.txt
