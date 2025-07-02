@@ -1,6 +1,5 @@
 import os
 import hashlib
-import getpass
 
 
 def hash_password(password: str) -> str:
@@ -56,7 +55,7 @@ def login_user():
     username = input("Enter your username: ")
 
     # input("Enter your password: ")
-    password = getpass.getpass("Enter your password: ")
+    password = input("Enter your password: ")
     if verify_user(username, password):
         print(f"User {username} logged in successfully.")
     else:
