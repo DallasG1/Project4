@@ -1,10 +1,27 @@
 import os
 import hashlib
+import sqlite3
 
 
 def hash_password(password: str) -> str:
     """Hash a password using SHA-256."""
     return hashlib.sha256(password.encode()).hexdigest()
+
+
+def initialize_db():
+    """Initialize the SQLite database and create the users table if it doesn't exist."""
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL,
+            password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 
 user_file = "Users.txt"
@@ -15,37 +32,52 @@ with open(user_file, "r") as file:
 
 def register_user(username: str, email: str, password: str):
     """Register a new user with a username, email, and password."""
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
     hashed_password = hash_password(password)
-    with open(user_file, "a") as file:
-        file.write(f"{username} {email} {hashed_password}\n")
-    print(f"User {username} registered successfully.")
+    try:
+        cursor.execute('''
+            INSERT INTO users (username, email, password)
+            VALUES (?, ?, ?)
+        ''', (username, email, hashed_password))
+        conn.commit()
+        print(f"User {username} registered successfully.")
+    except sqlite3.IntegrityError:
+        print(
+            f"Username {username} already exists. Choose a different username.")
+    conn.close()
 
 
-def load_users():
-    """Load users from the user file."""
-    users = {}
-    if not os.path.exists(user_file):
-        return users
+# def load_users():
+#     """Load users from the user file."""
+#     users = {}
+#     if not os.path.exists(user_file):
+#         return users
 
-    with open(user_file, "r") as file:
-        for line in file:
-            parts = line.strip().split()
-            if len(parts) != 3:
-                continue  # skip empty or malformed lines
-            username, email, hashed_password = parts
-            users[username] = {
-                "username": username,
-                "password": hashed_password
-            }
-    return users
+#     with open(user_file, "r") as file:
+#         for line in file:
+#             parts = line.strip().split()
+#             if len(parts) != 3:
+#                 continue  # skip empty or malformed lines
+#             username, email, hashed_password = parts
+#             users[username] = {
+#                 "username": username,
+#                 "password": hashed_password
+#             }
+#     return users
 
 
 def verify_user(username: str, password: str) -> bool:
     """Verify a user's credentials."""
-    users = load_users()
-    hashed_password = hash_password(password)
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT password FROM users WHERE username = ?', (username,))
+    result = cursor.fetchone()
+    conn.close()
     print(users)
-    if username in users and users[username]["password"] == hashed_password:
+
+    if result and result[0] == hash_password(password):
         return True
     return False
 
@@ -63,6 +95,9 @@ def login_user():
 
 
 def main():
+    """Main function to run the user login and registration system."""
+    initialize_db()
+    print("Welcome to the User Login System!")
     while True:
         choice = input(
             "Enter '1' to login or '2' to register or '3' to Exit: ")
